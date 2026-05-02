@@ -53,6 +53,23 @@
         #hiddenCameraInput { display: none; }
         
         #statusMsg { margin-top: 15px; font-size: 14px; color: var(--primary-color); }
+        #galleryContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    padding-top: 20px;
+}
+.photo-card {
+    background: var(--surface-color);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+.photo-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
     </style>
 </head>
 <body>
@@ -94,17 +111,19 @@
         const counterText = document.getElementById('counter');
         const statusMsg = document.getElementById('statusMsg');
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-            if(tabName === 'camera') {
-                document.querySelectorAll('.tab')[0].classList.add('active');
-                document.getElementById('camera-section').classList.add('active');
-            } else {
-                document.querySelectorAll('.tab')[1].classList.add('active');
-                document.getElementById('gallery-section').classList.add('active');
-            }
-        }
+       function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    
+    if(tabName === 'camera') {
+        document.querySelectorAll('.tab')[0].classList.add('active');
+        document.getElementById('camera-section').classList.add('active');
+    } else {
+        document.querySelectorAll('.tab')[1].classList.add('active');
+        document.getElementById('gallery-section').classList.add('active');
+        loadGallery(); // ВИКЛИКАЄМО ЗАВАНТАЖЕННЯ ГАЛЕРЕЇ
+    }
+}
 
         takePhotoBtn.addEventListener('click', () => {
             if (photosLeft > 0) hiddenInput.click();
@@ -147,6 +166,40 @@
             };
             reader.readAsDataURL(file);
         });
+        function loadGallery() {
+    const container = document.getElementById('galleryContainer');
+    container.innerHTML = "<p>Завантаження фото...</p>";
+
+    fetch(GOOGLE_SCRIPT_URL)
+        .then(response => response.json())
+        .then(files => {
+            container.innerHTML = ""; // Очищаємо текст завантаження
+            
+            if (files.length === 0) {
+                container.innerHTML = "<p>В галереї поки немає фото.</p>";
+                return;
+            }
+
+            files.forEach(file => {
+                const card = document.createElement('div');
+                card.className = 'photo-card';
+                
+                // Використовуємо спеціальне посилання Google для прев'ю
+                const imgUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w500`;
+                const downloadUrl = `https://drive.google.com/uc?export=download&id=${file.id}`;
+
+                card.innerHTML = `
+                    <img src="${imgUrl}" alt="Фото">
+                    <button class="download-btn" onclick="window.open('${downloadUrl}')">⬇️ Скачати</button>
+                `;
+                container.appendChild(card);
+            });
+        })
+        .catch(err => {
+            container.innerHTML = "<p>Не вдалося завантажити галерею.</p>";
+            console.error(err);
+        });
+}
     </script>
 </body>
 </html>
